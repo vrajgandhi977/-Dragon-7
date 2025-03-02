@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Set up Streamlit app for mobile
-st.set_page_config(page_title="Dragon 7 Counter", layout="centered")
+st.set_page_config(page_title="Dragon 7 Predictor", layout="centered")
 
 class Dragon7Counter:
     def __init__(self, total_decks=8):
@@ -12,13 +11,14 @@ class Dragon7Counter:
         self.remaining_decks = total_decks
         self.cards_dealt = 0
         self.history = []  # Stores history of hands
+        self.dragon7_occurrences = []  # Stores past Dragon 7 hands
         self.current_hand = {"Player": [], "Banker": []}
 
     def update_count(self, card):
         """ Updates the running count based on the card drawn """
-        if card in [4, 5, 6, 7]:  # These cards reduce Dragon 7 chance
+        if card in [4, 5, 6, 7]:  
             self.running_count -= 1
-        elif card in [8, 9]:  # These cards increase Dragon 7 chance
+        elif card in [8, 9]:  
             self.running_count += 2
         
         self.cards_dealt += 1
@@ -33,8 +33,17 @@ class Dragon7Counter:
         return self.running_count / self.remaining_decks
 
     def should_bet_dragon7(self):
-        """ Decides if it's time to bet on Dragon 7 """
-        return self.get_true_count() >= 4
+        """ Predicts when to bet on Dragon 7 """
+        # If True Count is high and a pattern is detected, recommend betting
+        recent_dragon7 = len(self.dragon7_occurrences) >= 2
+        last_dragon7_hand = self.dragon7_occurrences[-1] if recent_dragon7 else None
+
+        if self.get_true_count() >= 4:
+            return "🔥 Strong Bet Now!"
+        elif last_dragon7_hand and last_dragon7_hand + 5 < len(self.history):
+            return "⚠️ Possible Soon!"
+        else:
+            return "❌ Not Yet"
 
     def add_card_to_hand(self, role, card):
         """ Adds a card to either the Player or Banker hand """
@@ -62,12 +71,16 @@ class Dragon7Counter:
             "True Count": self.get_true_count()
         })
 
+        # Track past Dragon 7 occurrences
+        if is_dragon7:
+            self.dragon7_occurrences.append(len(self.history))
+
         # Reset for the next hand
         self.current_hand = {"Player": [], "Banker": []}
 
 # Streamlit UI
-st.title("🐉 Dragon 7 Tracker - Multi-Card Hands")
-st.write("Track multiple cards per hand and detect Dragon 7 wins!")
+st.title("🐉 Dragon 7 Predictor")
+st.write("Track baccarat hands and predict when to bet on Dragon 7!")
 
 # Initialize session state for counter
 if "counter" not in st.session_state:
@@ -75,16 +88,11 @@ if "counter" not in st.session_state:
 
 counter = st.session_state.counter
 
-# Display Current Count
+# Display Current Count & Prediction
 st.subheader(f"📊 Running Count: {counter.running_count}")
 st.subheader(f"📉 True Count: {counter.get_true_count():.2f}")
 st.subheader(f"📦 Decks Remaining: {counter.remaining_decks:.2f}")
-
-# Dragon 7 Betting Recommendation
-if counter.should_bet_dragon7():
-    st.success("🔥 Time to bet on Dragon 7! ✅")
-else:
-    st.warning("🚫 No Dragon 7 bet yet.")
+st.subheader(f"🎯 Dragon 7 Prediction: {counter.should_bet_dragon7()}")
 
 # Show current hand
 st.write("### 🃏 Current Hand")
@@ -97,47 +105,17 @@ st.write("### ✏️ Add Cards to Current Hand")
 col1, col2 = st.columns(2)
 with col1:
     st.write("**Add to Player:**")
-    if st.button("2️⃣", key="p2"):
-        counter.add_card_to_hand("Player", 2)
-    if st.button("3️⃣", key="p3"):
-        counter.add_card_to_hand("Player", 3)
-    if st.button("4️⃣", key="p4"):
-        counter.add_card_to_hand("Player", 4)
-    if st.button("5️⃣", key="p5"):
-        counter.add_card_to_hand("Player", 5)
-    if st.button("6️⃣", key="p6"):
-        counter.add_card_to_hand("Player", 6)
-    if st.button("7️⃣", key="p7"):
-        counter.add_card_to_hand("Player", 7)
-    if st.button("8️⃣", key="p8"):
-        counter.add_card_to_hand("Player", 8)
-    if st.button("9️⃣", key="p9"):
-        counter.add_card_to_hand("Player", 9)
-    if st.button("🔟 / J / Q / K", key="p10"):
-        counter.add_card_to_hand("Player", 10)
+    for card in range(2, 11):  # 2 to 10
+        if st.button(str(card), key=f"p{card}"):
+            counter.add_card_to_hand("Player", card)
     if st.button("🅰️ (Ace)", key="p1"):
         counter.add_card_to_hand("Player", 1)
 
 with col2:
     st.write("**Add to Banker:**")
-    if st.button("2️⃣", key="b2"):
-        counter.add_card_to_hand("Banker", 2)
-    if st.button("3️⃣", key="b3"):
-        counter.add_card_to_hand("Banker", 3)
-    if st.button("4️⃣", key="b4"):
-        counter.add_card_to_hand("Banker", 4)
-    if st.button("5️⃣", key="b5"):
-        counter.add_card_to_hand("Banker", 5)
-    if st.button("6️⃣", key="b6"):
-        counter.add_card_to_hand("Banker", 6)
-    if st.button("7️⃣", key="b7"):
-        counter.add_card_to_hand("Banker", 7)
-    if st.button("8️⃣", key="b8"):
-        counter.add_card_to_hand("Banker", 8)
-    if st.button("9️⃣", key="b9"):
-        counter.add_card_to_hand("Banker", 9)
-    if st.button("🔟 / J / Q / K", key="b10"):
-        counter.add_card_to_hand("Banker", 10)
+    for card in range(2, 11):  # 2 to 10
+        if st.button(str(card), key=f"b{card}"):
+            counter.add_card_to_hand("Banker", card)
     if st.button("🅰️ (Ace)", key="b1"):
         counter.add_card_to_hand("Banker", 1)
 
