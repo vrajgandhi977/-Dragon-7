@@ -5,7 +5,7 @@ import time
 
 st.set_page_config(page_title="Dragon 7 Predictor", layout="wide")
 
-# Custom Styling for Mobile
+# Custom Styling for Mobile Optimization
 st.markdown(
     """
     <style>
@@ -30,13 +30,13 @@ class Dragon7Counter:
         self.remaining_cards = {i: 4 * 8 for i in range(1, 11)}  # 8 decks
 
     def update_count(self, card):
-        """ Updates the running count and remaining cards """
-        if card in [4, 5, 6, 7]:  
-            self.running_count -= 1
-        elif card in [8, 9]:  
-            self.running_count += 2
+        """ Updates the running count using the optimized system """
+        card_values = {1: 0, 2: 0, 3: 0, 4: -1, 5: -1, 6: -1, 7: -1, 8: 2, 9: 2, 10: 0}
+        self.running_count += card_values.get(card, 0)
+        
         self.cards_dealt += 1
         self.update_decks()
+
         if self.remaining_cards[card] > 0:
             self.remaining_cards[card] -= 1
 
@@ -58,15 +58,18 @@ class Dragon7Counter:
 
     def predict_dragon7(self):
         """ Predicts when to bet on Dragon 7 """
-        probability = self.get_dragon7_probability()
-        if probability >= 15:
-            return "🔥 Very Likely!"
-        elif probability >= 10:
-            return "⚠️ Strong Bet!"
-        elif probability >= 6:
-            return "🤔 Possible Soon!"
+        if self.get_true_count() >= 4:
+            return "🔥 BET NOW! (TC ≥ 4, +8.03% Edge)"
+        elif self.get_true_count() >= 3:
+            return "⚠️ Almost There! (TC = 3)"
         else:
             return "❌ Not Yet"
+
+    def estimate_profit(self):
+        """ Estimates expected profit based on past Dragon 7 bets """
+        bets_placed = len([h for h in self.history if h["Dragon 7"] == "✅ Yes"])
+        expected_profit = bets_placed * 59  # Assuming $100 bet per Dragon 7
+        return expected_profit
 
     def add_card_to_hand(self, role, card):
         """ Adds a card to either the Player or Banker hand """
@@ -81,17 +84,9 @@ class Dragon7Counter:
         banker_total = sum(banker_hand) % 10  
         player_total = sum(player_hand) % 10
 
-        # Determine winner automatically
-        if banker_total > player_total:
-            winner = "Banker"
-        elif player_total > banker_total:
-            winner = "Player"
-        else:
-            winner = "Tie"
-
+        winner = "Banker" if banker_total > player_total else "Player" if player_total > banker_total else "Tie"
         is_dragon7 = len(banker_hand) == 3 and banker_total == 7
 
-        # Save the hand details
         self.history.append({
             "Hand": len(self.history) + 1,
             "Player Cards": str(player_hand),
@@ -112,8 +107,8 @@ class Dragon7Counter:
         self.current_hand = {"Player": [], "Banker": []}
 
 # Streamlit UI
-st.title("🐉 Mobile Dragon 7 Predictor")
-st.write("Track baccarat hands, predict Dragon 7, and play seamlessly!")
+st.title("🐉 Dragon 7 Predictor - Advanced Version")
+st.write("Track baccarat hands, predict Dragon 7, and optimize profitability!")
 
 if "counter" not in st.session_state:
     st.session_state.counter = Dragon7Counter()
@@ -125,14 +120,13 @@ st.subheader(f"📉 True Count: {counter.get_true_count():.2f}")
 st.subheader(f"🎯 Dragon 7 Prediction: {counter.predict_dragon7()}")
 st.progress(counter.get_dragon7_probability() / 25)
 
+# **Profit Estimator**
+st.write(f"💰 **Estimated Profit This Session: ${counter.estimate_profit()}**")
+
 # **Hand Display**
 st.write("### 🃏 Current Hand")
 st.write(f"**Player:** {counter.current_hand['Player']}")
 st.write(f"**Banker:** {counter.current_hand['Banker']}")
-
-# **Remaining Cards**
-st.write("### 🎴 Remaining Cards")
-st.dataframe(pd.DataFrame(counter.remaining_cards, index=["Count"]).T, height=200)
 
 # **Card Input - Optimized for Mobile**
 st.write("### ✏️ Add Cards")
@@ -158,20 +152,6 @@ if st.button("✅ Finalize Hand"):
         time.sleep(0.3)  
         counter.finalize_hand()
         st.rerun()
-
-# **Hand History - Compact for Mobile**
-with st.expander("📜 Hand History & True Count Graph", expanded=False):
-    if counter.history:
-        df = pd.DataFrame(counter.history)
-        st.dataframe(df, height=200)
-        st.write("### True Count Trend")
-        fig, ax = plt.subplots()
-        ax.plot(df["Hand"], df["True Count"], marker="o", linestyle="-", color="blue", label="True Count")
-        ax.set_xlabel("Hand Number")
-        ax.set_ylabel("True Count")
-        ax.axhline(y=4, color="red", linestyle="--", label="Dragon 7 Bet Threshold")
-        ax.legend()
-        st.pyplot(fig)
 
 # **Reset Button**
 if st.button("🔄 Reset"):
