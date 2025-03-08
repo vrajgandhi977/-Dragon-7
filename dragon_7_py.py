@@ -48,55 +48,71 @@ class Dragon7Simulator:
         else:
             return "❌ Not Yet"
 
-    def place_bet(self):
-        if self.get_true_count() >= 4:
-            bet_result = "✅ WIN" if self.check_dragon7() else "❌ LOSE"
-            win_amount = self.bet_amount * 40 if bet_result == "✅ WIN" else -self.bet_amount
-            self.bankroll += win_amount
-
-            self.history.append({
-                "Bet Amount": self.bet_amount,
-                "Result": bet_result,
-                "New Bankroll": self.bankroll
-            })
-
-    def check_dragon7(self):
-        banker_hand = self.current_hand["Banker"]
-        return len(banker_hand) == 3 and sum(banker_hand) % 10 == 7
-
     def add_card_to_hand(self, role, card):
         if role in self.current_hand:
             self.current_hand[role].append(card)
             self.update_count(card)
 
-    def finalize_hand(self):
-        banker_hand = self.current_hand["Banker"]
+    def predict_winner(self):
+        """ Uses official EZ Baccarat rules to predict the winner """
         player_hand = self.current_hand["Player"]
-        banker_total = sum(banker_hand) % 10  
+        banker_hand = self.current_hand["Banker"]
+
+        if not player_hand or not banker_hand:
+            return "Waiting for more cards..."
+
         player_total = sum(player_hand) % 10
+        banker_total = sum(banker_hand) % 10
 
-        winner = "Banker" if banker_total > player_total else "Player" if player_total > banker_total else "Tie"
-        is_dragon7 = self.check_dragon7()
+        # **Natural Win (8 or 9)**
+        if player_total in [8, 9] or banker_total in [8, 9]:
+            if player_total > banker_total:
+                return "🏆 **Predicted Winner: Player (Natural Win)**"
+            elif banker_total > player_total:
+                return "🏆 **Predicted Winner: Banker (Natural Win)**"
+            else:
+                return "🔄 **Predicted Result: Tie (Both Natural)**"
 
-        if self.auto_bet and self.get_true_count() >= 4:
-            self.place_bet()
+        # **Third Card Drawing Rules for Player**
+        if len(player_hand) == 2:
+            if player_total in [0, 1, 2, 3, 4, 5]:
+                return "👀 **Prediction Pending: Player Draws Third Card**"
+            elif player_total in [6, 7]:
+                if banker_total <= 5:
+                    return "👀 **Prediction Pending: Banker Draws Third Card**"
+                return "🏆 **Predicted Winner: Player (Stands at 6 or 7)**"
 
-        self.history.append({
-            "Hand": len(self.history) + 1,
-            "Player Cards": str(player_hand),
-            "Banker Cards": str(banker_hand),
-            "Player Total": player_total,
-            "Banker Total": banker_total,
-            "Winner": winner,
-            "Dragon 7": "✅ Yes" if is_dragon7 else "❌ No",
-            "True Count": self.get_true_count()
-        })
+        # **Third Card Drawing Rules for Banker**
+        if len(player_hand) == 3:
+            player_third_card = player_hand[2]
 
-        self.current_hand = {"Player": [], "Banker": []}
+            banker_draws = False
+            if banker_total <= 2:
+                banker_draws = True
+            elif banker_total == 3 and player_third_card != 8:
+                banker_draws = True
+            elif banker_total == 4 and player_third_card in [2, 3, 4, 5, 6, 7]:
+                banker_draws = True
+            elif banker_total == 5 and player_third_card in [4, 5, 6, 7]:
+                banker_draws = True
+            elif banker_total == 6 and player_third_card in [6, 7]:
+                banker_draws = True
+
+            if banker_draws:
+                return "👀 **Prediction Pending: Banker Draws Third Card**"
+            else:
+                if player_total > banker_total:
+                    return "🏆 **Predicted Winner: Player**"
+                elif banker_total > player_total:
+                    return "🏆 **Predicted Winner: Banker**"
+                else:
+                    return "🔄 **Predicted Result: Tie**"
+
+        return "🔄 **Waiting for third card rules to apply**"
 
 # Streamlit UI
-st.title("🐉 Dragon 7 Betting Simulator - Easy Card Logging")
-st.write("Track baccarat hands, place bets, and manage your bankroll!")
+st.title("🐉 Dragon 7!")
+st.write("Track baccarat hands, predict winners, and manage your bankroll!")
 
 if "simulator" not in st.session_state:
     st.session_state.simulator = Dragon7Simulator()
@@ -118,6 +134,10 @@ st.write("### 🃏 Current Hand")
 st.write(f"**Player:** {simulator.current_hand['Player']}")
 st.write(f"**Banker:** {simulator.current_hand['Banker']}")
 
+# **Winner Prediction**
+st.write("### 🔮 Predicted Winner")
+st.subheader(simulator.predict_winner())
+
 # **Easier Card Input Grid**
 st.write("### ✏️ Add Cards Quickly")
 
@@ -136,22 +156,7 @@ with col2:
         simulator.add_card_to_hand("Banker", card)
         st.rerun()
 
-# Finalize Hand
-if st.button("✅ Finalize Hand"):
-    with st.spinner("Processing..."):
-        time.sleep(0.3)  
-        simulator.finalize_hand()
-        st.rerun()
-
-# Betting History
-with st.expander("📜 Betting History", expanded=False):
-    if simulator.history:
-        df = pd.DataFrame(simulator.history)
-        st.dataframe(df, height=200)
-
 # Reset Game
 if st.button("🔄 Reset"):
-    with st.spinner("Resetting..."):
-        time.sleep(0.3)
-        st.session_state.simulator = Dragon7Simulator()
-        st.rerun()
+    st.session_state.simulator = Dragon7Simulator()
+    st.rerun()
