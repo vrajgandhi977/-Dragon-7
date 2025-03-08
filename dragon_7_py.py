@@ -5,17 +5,6 @@ import time
 
 st.set_page_config(page_title="Dragon 7 Betting Simulator", layout="wide")
 
-# Function to play alert sound
-def play_sound():
-    st.markdown(
-        """
-        <audio autoplay>
-            <source src="https://www.soundjay.com/button/beep-07.wav" type="audio/wav">
-        </audio>
-        """,
-        unsafe_allow_html=True,
-    )
-
 class Dragon7Simulator:
     def __init__(self, total_decks=8, bankroll=1000):
         self.running_count = 0
@@ -103,13 +92,10 @@ class Dragon7Simulator:
             "True Count": self.get_true_count()
         })
 
-        if self.get_true_count() >= 4:
-            play_sound()  # Play sound alert when bet is ready
-
         self.current_hand = {"Player": [], "Banker": []}
 
 # Streamlit UI
-st.title("🐉 Dragon 7 Betting Simulator - Real-Time Alerts")
+st.title("🐉 Dragon 7 Betting Simulator - Easy Card Logging")
 st.write("Track baccarat hands, place bets, and manage your bankroll!")
 
 if "simulator" not in st.session_state:
@@ -132,21 +118,23 @@ st.write("### 🃏 Current Hand")
 st.write(f"**Player:** {simulator.current_hand['Player']}")
 st.write(f"**Banker:** {simulator.current_hand['Banker']}")
 
-# Add Cards UI
-st.write("### ✏️ Add Cards")
+# **Easier Card Input Grid**
+st.write("### ✏️ Add Cards Quickly")
+
 col1, col2 = st.columns(2)
 with col1:
-    st.write("**Player:**")
-    for card in range(1, 11):
-        if st.button(str(card), key=f"p{card}"):
-            simulator.add_card_to_hand("Player", card)
-            st.rerun()
+    st.write("**Player Cards**")
+    card = st.radio("Select Card", list(range(1, 11)), horizontal=True, key="p_select")
+    if st.button("➕ Add to Player"):
+        simulator.add_card_to_hand("Player", card)
+        st.rerun()
+
 with col2:
-    st.write("**Banker:**")
-    for card in range(1, 11):
-        if st.button(str(card), key=f"b{card}"):
-            simulator.add_card_to_hand("Banker", card)
-            st.rerun()
+    st.write("**Banker Cards**")
+    card = st.radio("Select Card", list(range(1, 11)), horizontal=True, key="b_select")
+    if st.button("➕ Add to Banker"):
+        simulator.add_card_to_hand("Banker", card)
+        st.rerun()
 
 # Finalize Hand
 if st.button("✅ Finalize Hand"):
