@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import time  
+import random
 
 st.set_page_config(page_title="Dragon 7 Betting Simulator", layout="wide")
 
@@ -12,32 +11,21 @@ third_card_chart = pd.DataFrame({
 })
 
 class Dragon7Simulator:
-    def __init__(self, total_decks=8, bankroll=1000):
-        self.running_count = 0
-        self.total_decks = total_decks
-        self.remaining_decks = total_decks
-        self.cards_dealt = 0
-        self.history = []
-        self.dragon7_occurrences = []
+    def __init__(self, total_decks=8):
         self.current_hand = {"Player": [], "Banker": []}
         self.remaining_cards = {i: 4 * 8 for i in range(1, 11)}
-        self.bankroll = bankroll
-        self.bet_amount = 25  
-        self.auto_bet = False  
 
-    def update_count(self, card):
-        card_values = {1: 0, 2: 0, 3: 0, 4: -1, 5: -1, 6: -1, 7: -1, 8: 2, 9: 2, 10: 0}
-        self.running_count += card_values.get(card, 0)
-        self.cards_dealt += 1
-        self.update_decks()
-        if self.remaining_cards[card] > 0:
-            self.remaining_cards[card] -= 1
+    def add_card_to_hand(self, role, card):
+        """ Adds a card to either the Player or Banker hand """
+        if role in self.current_hand:
+            self.current_hand[role].append(card)
+            if self.remaining_cards[card] > 0:
+                self.remaining_cards[card] -= 1
 
-    def update_decks(self):
-        self.remaining_decks = max(1, self.total_decks - (self.cards_dealt / 52))
-
-    def get_true_count(self):
-        return self.running_count / self.remaining_decks
+    def draw_random_card(self):
+        """ Draws a random card from the remaining deck """
+        available_cards = [k for k, v in self.remaining_cards.items() if v > 0]
+        return random.choice(available_cards) if available_cards else None
 
     def predict_winner(self):
         """ Uses official EZ Baccarat rules to predict the winner """
@@ -60,13 +48,10 @@ class Dragon7Simulator:
                 return "🔄 **Predicted Result: Tie (Both Natural)**"
 
         # **Third Card Drawing Rules for Player**
-        if len(player_hand) == 2:
-            if player_total in [0, 1, 2, 3, 4, 5]:
-                return "👀 **Prediction Pending: Player Draws Third Card**"
-            elif player_total in [6, 7]:
-                if banker_total <= 5:
-                    return "👀 **Prediction Pending: Banker Draws Third Card**"
-                return "🏆 **Predicted Winner: Player (Stands at 6 or 7)**"
+        if len(player_hand) == 2 and player_total in [0, 1, 2, 3, 4, 5]:
+            third_card = self.draw_random_card()
+            if third_card:
+                self.current_hand["Player"].append(third_card)
 
         # **Third Card Drawing Rules for Banker**
         if len(player_hand) == 3:
@@ -85,19 +70,23 @@ class Dragon7Simulator:
                 banker_draws = True
 
             if banker_draws:
-                return "🟢 **Banker Must Draw Third Card**"
-            else:
-                if player_total > banker_total:
-                    return "🏆 **Predicted Winner: Player**"
-                elif banker_total > player_total:
-                    return "🏆 **Predicted Winner: Banker**"
-                else:
-                    return "🔄 **Predicted Result: Tie**"
+                third_card = self.draw_random_card()
+                if third_card:
+                    self.current_hand["Banker"].append(third_card)
 
-        return "🔄 **Waiting for third card rules to apply**"
+        # **Final Winner Prediction**
+        player_total = sum(self.current_hand["Player"]) % 10
+        banker_total = sum(self.current_hand["Banker"]) % 10
+
+        if player_total > banker_total:
+            return "🏆 **Predicted Winner: Player**"
+        elif banker_total > player_total:
+            return "🏆 **Predicted Winner: Banker**"
+        else:
+            return "🔄 **Predicted Result: Tie**"
 
 # Streamlit UI
-st.title("🐉 Dragon 7 Betting Simulator - Third-Card Chart & Highlights!")
+st.title("🐉 Dragon 7 Betting Simulator - Now With Auto Banker Drawing!")
 st.write("Track baccarat hands, predict winners, and apply full third-card rules!")
 
 if "simulator" not in st.session_state:
@@ -135,6 +124,11 @@ with col2:
     if st.button("➕ Add to Banker"):
         simulator.add_card_to_hand("Banker", card)
         st.rerun()
+
+# **Auto Banker Draw Button**
+if st.button("🎴 Auto-Draw for Banker"):
+    simulator.predict_winner()  # This will trigger auto drawing
+    st.rerun()
 
 # Reset Game
 if st.button("🔄 Reset"):
