@@ -5,6 +5,17 @@ import time
 
 st.set_page_config(page_title="Dragon 7 Betting Simulator", layout="wide")
 
+# Function to play alert sound
+def play_sound():
+    st.markdown(
+        """
+        <audio autoplay>
+            <source src="https://www.soundjay.com/button/beep-07.wav" type="audio/wav">
+        </audio>
+        """,
+        unsafe_allow_html=True,
+    )
+
 class Dragon7Simulator:
     def __init__(self, total_decks=8, bankroll=1000):
         self.running_count = 0
@@ -92,10 +103,13 @@ class Dragon7Simulator:
             "True Count": self.get_true_count()
         })
 
+        if self.get_true_count() >= 4:
+            play_sound()  # Play sound alert when bet is ready
+
         self.current_hand = {"Player": [], "Banker": []}
 
 # Streamlit UI
-st.title("🐉 Dragon 7 Betting Simulator")
+st.title("🐉 Dragon 7 Betting Simulator - Real-Time Alerts")
 st.write("Track baccarat hands, place bets, and manage your bankroll!")
 
 if "simulator" not in st.session_state:
