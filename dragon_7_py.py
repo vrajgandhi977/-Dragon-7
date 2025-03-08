@@ -78,7 +78,7 @@ class Dragon7Simulator:
             return "🔄 **Predicted Result: Tie**"
 
 # Streamlit UI
-st.title("🐉 Dragon 7 Betting Simulator - Full Third-Card Rules!")
+st.title("🐉 Dragon 7")
 st.write("Track baccarat hands, predict winners, and apply full third-card rules!")
 
 if "simulator" not in st.session_state:
